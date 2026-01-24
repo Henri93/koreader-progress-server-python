@@ -170,10 +170,12 @@ docker compose up -d
 
 ## KOReader Setup
 
-1. Go to: Settings > Cloud storage > Progress sync
-2. Set sync server to: `http://your-server:8080`
-3. Register or login with your credentials
-4. Enable "Auto sync" for automatic progress updates
+1. Open a book in KOReader
+2. Open the menu (swipe down from top) and tap the settings icon (wrench)
+3. Select **Progress sync** > **Custom sync server** > enter your server URL (e.g., `http://your-server:8080`)
+4. Select **Register** or **Login** and enter your credentials
+5. Select **Push progress from this device** to test
+6. *optional* Enable **Auto sync** for automatic progress updates when opening/closing books
 
 ## References
 
