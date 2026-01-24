@@ -5,6 +5,49 @@
 
 A simple Python/FastAPI server for syncing reading progress across KOReader devices.
 
+## Running Sync Server
+
+### Local Development
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn main:app --reload --port 8080
+```
+
+### Docker
+
+```bash
+docker compose up -d
+```
+
+## Configuration
+
+| Environment Variable | Default | Description |
+|---------------------|---------|-------------|
+| PASSWORD_SALT | `default-salt-change-me` | Salt prepended to passwords before hashing |
+| DATABASE_URL | `sqlite:///./data/koreader.db` | SQLite database path |
+
+## KOReader Setup
+
+1. Open a book in KOReader
+2. Open the menu (swipe down from top) and tap the settings icon (wrench)
+3. Select **Progress sync** > **Custom sync server** > enter your server URL (e.g., `http://your-server:8080`)
+4. Select **Register** or **Login** and enter your credentials
+5. Select **Push progress from this device** to test
+6. *optional* Enable **Auto sync** for automatic progress updates when opening/closing books
+
+## iOS Setup
+
+Since, iOS doesn't seem to have a KOReader app I could find, I went with [Readest](https://readest.com/) which supports KOReader progress sync.
+
+1. Open Readest
+2. Open a book(I used Calibre content server's OPDS library to sync book files across devices)
+3. Open book menu table of contents in the bottom left(bullet list icon)
+4. Select hamburger menu in the top right > Select KOReader Sync
+5. Enter enter your server URL (e.g., `http://your-server:8080`) and credentials
+
 ## How It Works
 
 ### Multi-User Model
@@ -143,39 +186,6 @@ Response:
 
 #### GET /health, GET /healthcheck
 Health check endpoints for monitoring.
-
-## Running
-
-### Local Development
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn main:app --reload --port 8080
-```
-
-### Docker
-
-```bash
-docker compose up -d
-```
-
-## Configuration
-
-| Environment Variable | Default | Description |
-|---------------------|---------|-------------|
-| PASSWORD_SALT | `default-salt-change-me` | Salt prepended to passwords before hashing |
-| DATABASE_URL | `sqlite:///./data/koreader.db` | SQLite database path |
-
-## KOReader Setup
-
-1. Open a book in KOReader
-2. Open the menu (swipe down from top) and tap the settings icon (wrench)
-3. Select **Progress sync** > **Custom sync server** > enter your server URL (e.g., `http://your-server:8080`)
-4. Select **Register** or **Login** and enter your credentials
-5. Select **Push progress from this device** to test
-6. *optional* Enable **Auto sync** for automatic progress updates when opening/closing books
 
 ## References
 
