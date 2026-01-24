@@ -164,3 +164,10 @@ docker compose up -d
 2. Set sync server to: `http://your-server:8080`
 3. Register or login with your credentials
 4. Enable "Auto sync" for automatic progress updates
+
+## References
+
+This project implements the KOReader sync protocol. For reference implementations in other languages:
+
+- [koreader/koreader-sync-server](https://github.com/koreader/koreader-sync-server) - Official Lua/OpenResty implementation
+- [nperez0111/koreader-sync](https://github.com/nperez0111/koreader-sync) - TypeScript/Bun implementation
