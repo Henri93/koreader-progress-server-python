@@ -1,0 +1,11 @@
+services:
+  koreader-sync:
+    build: .
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/app/data
+    environment:
+      - PASSWORD_SALT=${PASSWORD_SALT:-change-this-salt}
+      - DATABASE_URL=sqlite:///./data/koreader.db
+    restart: unless-stopped
