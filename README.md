@@ -195,7 +195,9 @@ Health check endpoints for monitoring.
 
 - [koreader-calibre-plugin](https://github.com/harmtemolder/koreader-calibre-plugin) - A calibre plugin to synchronize metadata from KOReader to calibre.
 
-Sync server implementations:
+- [readest](https://readest.com/) - Readest is a modern, open-source ebook reader for immersive reading. Seamlessly sync your progress, notes, highlights, and library across macOS, Windows, Linux, Android, iOS, and the Web.
+
+Other Sync server implementations:
 
 - [koreader/koreader-sync-server](https://github.com/koreader/koreader-sync-server) - Official Lua/OpenResty implementation
 - [nperez0111/koreader-sync](https://github.com/nperez0111/koreader-sync) - TypeScript/Bun implementation
