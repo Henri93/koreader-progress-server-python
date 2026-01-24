@@ -1,5 +1,11 @@
+import hashlib
 import httpx
 from behave import given, when, then
+
+
+def md5_hash(password: str) -> str:
+    """Convert raw password to MD5 hash (what KOReader sends)."""
+    return hashlib.md5(password.encode()).hexdigest()
 
 
 @given('a user "{username}" with password "{password}" exists')
@@ -45,7 +51,7 @@ def step_registration_fail(context, status):
 def step_can_authenticate(context, username, password):
     response = httpx.get(
         f"{context.base_url}/users/auth",
-        headers={"x-auth-user": username, "x-auth-key": password},
+        headers={"x-auth-user": username, "x-auth-key": md5_hash(password)},
     )
     assert response.status_code == 200
     assert response.json()["status"] == "authenticated"
@@ -55,7 +61,7 @@ def step_can_authenticate(context, username, password):
 def step_authenticate(context, username, password):
     context.last_response = httpx.get(
         f"{context.base_url}/users/auth",
-        headers={"x-auth-user": username, "x-auth-key": password},
+        headers={"x-auth-user": username, "x-auth-key": md5_hash(password)},
     )
 
 

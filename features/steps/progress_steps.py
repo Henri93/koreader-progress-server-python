@@ -1,6 +1,12 @@
+import hashlib
 import httpx
 from behave import given, when, then, register_type
 import parse
+
+
+def md5_hash(password: str) -> str:
+    """Convert raw password to MD5 hash (what KOReader sends)."""
+    return hashlib.md5(password.encode()).hexdigest()
 
 
 # Custom type for quoted strings
@@ -29,9 +35,9 @@ def table_to_dict(table):
 
 
 def get_auth_headers(context, username):
-    """Get authentication headers for a user."""
+    """Get authentication headers for a user (password as MD5 hash)."""
     password = context.users.get(username, "readerpass")
-    return {"x-auth-user": username, "x-auth-key": password}
+    return {"x-auth-user": username, "x-auth-key": md5_hash(password)}
 
 
 @given('user "{username}" has saved progress for document "{document}"')

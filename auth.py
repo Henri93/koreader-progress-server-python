@@ -1,4 +1,5 @@
 import os
+import hashlib
 import bcrypt
 from fastapi import Header, HTTPException, Depends
 from sqlalchemy.orm import Session
@@ -8,13 +9,20 @@ from models import User
 PASSWORD_SALT = os.getenv("PASSWORD_SALT", "default-salt-change-me").encode()
 
 
-def hash_password(password: str) -> str:
-    salted = PASSWORD_SALT + password.encode()
+def md5_hash(password: str) -> str:
+    """Convert raw password to MD5 hash."""
+    return hashlib.md5(password.encode()).hexdigest()
+
+
+def hash_password(password_md5: str) -> str:
+    """Hash an MD5 password for storage using bcrypt."""
+    salted = PASSWORD_SALT + password_md5.encode()
     return bcrypt.hashpw(salted, bcrypt.gensalt()).decode()
 
 
-def verify_password(password: str, password_hash: str) -> bool:
-    salted = PASSWORD_SALT + password.encode()
+def verify_password(password_md5: str, password_hash: str) -> bool:
+    """Verify MD5 password against stored bcrypt hash."""
+    salted = PASSWORD_SALT + password_md5.encode()
     return bcrypt.checkpw(salted, password_hash.encode())
 
 

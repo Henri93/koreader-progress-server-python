@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 
 from database import get_db, init_db
 from models import User, Progress, UserCreate, ProgressUpdate, ProgressResponse
-from auth import hash_password, get_current_user
+from auth import hash_password, md5_hash, get_current_user
 
 
 @asynccontextmanager
@@ -36,7 +36,7 @@ def create_user(user: UserCreate, db: Session = Depends(get_db)):
     if existing:
         raise HTTPException(status_code=402, detail="Username already exists")
 
-    db_user = User(username=user.username, password_hash=hash_password(user.password))
+    db_user = User(username=user.username, password_hash=hash_password(md5_hash(user.password)))
     db.add(db_user)
     db.commit()
 

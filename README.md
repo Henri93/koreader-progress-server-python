@@ -40,7 +40,7 @@ The document hash ensures the same book is identified across devices regardless 
 |--------|------|-------------|
 | id | INTEGER | Primary key |
 | username | TEXT | Unique username |
-| password_hash | TEXT | Bcrypt hash of salted password |
+| password_hash | TEXT | Bcrypt hash of salted MD5 password |
 
 ### Progress Table
 
@@ -65,7 +65,15 @@ All endpoints except `/users/create` and `/health` require authentication via he
 
 ```
 x-auth-user: <username>
-x-auth-key: <password>
+x-auth-key: <md5_hash_of_password>
+```
+
+**Note:** KOReader sends passwords as MD5 hashes. When using curl or other clients, you must send the MD5 hash of the password, not the raw password.
+
+```bash
+# Generate MD5 hash of password
+echo -n "mypass" | md5  # macOS
+echo -n "mypass" | md5sum | cut -d' ' -f1  # Linux
 ```
 
 ### Endpoints
@@ -85,9 +93,10 @@ Response: `{"status": "success"}` (201) or `{"detail": "Username already exists"
 Verify credentials are valid.
 
 ```bash
+# MD5 of "mypass" is a029d0df84eb5549c641e04a9ef389e5
 curl http://localhost:8080/users/auth \
   -H "x-auth-user: myuser" \
-  -H "x-auth-key: mypass"
+  -H "x-auth-key: a029d0df84eb5549c641e04a9ef389e5"
 ```
 
 Response: `{"status": "authenticated"}` (200) or `{"detail": "Unauthorized"}` (401)
@@ -99,7 +108,7 @@ Update reading progress for a document.
 curl -X PUT http://localhost:8080/syncs/progress \
   -H "Content-Type: application/json" \
   -H "x-auth-user: myuser" \
-  -H "x-auth-key: mypass" \
+  -H "x-auth-key: a029d0df84eb5549c641e04a9ef389e5" \
   -d '{
     "document": "0b229176d4e8db7f6d2b5a4952368d7a",
     "progress": "/body/DocFragment[42]/body/p[3]/text().0",
@@ -117,7 +126,7 @@ Retrieve the latest progress for a document.
 ```bash
 curl http://localhost:8080/syncs/progress/0b229176d4e8db7f6d2b5a4952368d7a \
   -H "x-auth-user: myuser" \
-  -H "x-auth-key: mypass"
+  -H "x-auth-key: a029d0df84eb5549c641e04a9ef389e5"
 ```
 
 Response:
@@ -168,7 +177,11 @@ docker compose up -d
 
 ## References
 
+- [calibre](https://calibre-ebook.com/) - calibre is a powerful and easy to use e-book manager. It’s also completely free and open source and great for both casual users and computer experts.
+
 - [koreader/koreader](https://github.com/koreader/koreader) - KOReader ebook reader application
+
+- [koreader-calibre-plugin](https://github.com/harmtemolder/koreader-calibre-plugin) - A calibre plugin to synchronize metadata from KOReader to calibre.
 
 Sync server implementations:
 
