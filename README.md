@@ -168,7 +168,10 @@ docker compose up -d
 
 ## References
 
-This project implements the KOReader sync protocol. For reference implementations in other languages:
+- [koreader/koreader](https://github.com/koreader/koreader) - KOReader ebook reader application
+
+Sync server implementations:
 
 - [koreader/koreader-sync-server](https://github.com/koreader/koreader-sync-server) - Official Lua/OpenResty implementation
 - [nperez0111/koreader-sync](https://github.com/nperez0111/koreader-sync) - TypeScript/Bun implementation
+- [myelsukov/koreader-sync](https://github.com/myelsukov/koreader-sync) - Go implementation
