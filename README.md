@@ -1,6 +1,6 @@
 # Simple KOReader Progress Sync Server
 
-[![Tests](https://github.com/Henri93/reader-progress/actions/workflows/test.yml/badge.svg)](https://github.com/Henri93/reader-progress/actions/workflows/test.yml)
+[![Tests](https://github.com/Henri93/koreader-progress-server-python/actions/workflows/test.yml/badge.svg)](https://github.com/Henri93/koreader-progress-server-python/actions/workflows/test.yml)
 
 A simple Python/FastAPI server for syncing reading progress across KOReader devices.
 
