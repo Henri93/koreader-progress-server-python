@@ -12,7 +12,7 @@ def md5_hash(password: str) -> str:
 def step_create_user(context, username, password):
     response = httpx.post(
         f"{context.base_url}/users/create",
-        json={"username": username, "password": password},
+        json={"username": username, "password": md5_hash(password)},
     )
     assert response.status_code == 201, f"Failed to create user: {response.text}"
     context.users[username] = password
@@ -22,7 +22,7 @@ def step_create_user(context, username, password):
 def step_register(context, username, password):
     context.last_response = httpx.post(
         f"{context.base_url}/users/create",
-        json={"username": username, "password": password},
+        json={"username": username, "password": md5_hash(password)},
     )
     if context.last_response.status_code == 201:
         context.users[username] = password
