@@ -12,9 +12,13 @@ echo "Building Lambda package..."
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"
 
+# Step 1: Create deployment package
+echo -e "${BLUE}📦 Creating deployment package...${NC}"
+
 # Install dependencies
 echo "Installing Python dependencies..."
-pip3 install -r "$PROJECT_ROOT/requirements-aws.txt" -t package/ --quiet
+pip3 install -r requirements-aws.txt --platform manylinux2014_aarch64 --target $BUILD_DIR/ --implementation cp --python-version 3.12 --only-binary=:all: --upgrade --no-cache-dir
+
 
 # Copy application code
 echo "Copying application code..."
@@ -28,7 +32,9 @@ cp -r "$PROJECT_ROOT/repositories" "$BUILD_DIR/"
 echo "Creating zip archive..."
 cd "$BUILD_DIR"
 rm -f "$OUTPUT_FILE"
-zip -r "$OUTPUT_FILE" . -x "*.pyc" -x "__pycache__/*" -x "*.dist-info/*" -x "*.egg-info/*"
+zip -r "$OUTPUT_FILE" . -q
+
+echo -e "${GREEN}✅ Package created: lambda_function.zip${NC}"
 
 # Cleanup
 rm -rf "$BUILD_DIR"

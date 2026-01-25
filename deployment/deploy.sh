@@ -4,6 +4,8 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 TERRAFORM_DIR="$PROJECT_ROOT/terraform"
+FUNCTION_NAME="reader-progress-prod"
+REGION="us-east-1"
 
 echo "=== Reader Progress AWS Deployment ==="
 echo ""
@@ -61,3 +63,12 @@ echo "Lambda function deployed. Now update nullspace-website to add API Gateway 
 echo ""
 echo "Outputs:"
 terraform output
+
+# echo -e "${BLUE}🔄 Updating Lambda function...${NC}"
+# aws lambda update-function-code \
+#     --function-name "$FUNCTION_NAME" \
+#     --zip-file fileb://lambda_package.zip \
+#     --region "$REGION" \
+#     --no-cli-pager
+
+# echo -e "${GREEN}✅ Lambda function updated successfully!${NC}"

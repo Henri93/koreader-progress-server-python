@@ -1,6 +1,6 @@
 # Core FastAPI dependencies for AWS Lambda
 fastapi==0.109.0
-bcrypt==4.1.2
+bcrypt>=4.1.2
 python-dotenv==1.0.0
 
 # AWS Lambda adapter

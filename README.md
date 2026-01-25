@@ -9,7 +9,7 @@ A simple Python/FastAPI server for syncing reading progress across KOReader devi
 
 Don't want to deploy your own? Use the public sync server:
 
-**`https://null-space.xyz/reader`**
+**`https://www.null-space.xyz/reader`**
 
 Just point your KOReader or Readest app to this URL and create an account.
 

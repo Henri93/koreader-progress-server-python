@@ -21,13 +21,15 @@ def md5_hash(password: str) -> str:
 def hash_password(password_md5: str) -> str:
     """Hash an MD5 password for storage using bcrypt."""
     salted = PASSWORD_SALT + password_md5.encode()
-    return bcrypt.hashpw(salted, bcrypt.gensalt()).decode()
+    # bcrypt has a max input length of 72 bytes
+    return bcrypt.hashpw(salted[:72], bcrypt.gensalt()).decode()
 
 
 def verify_password(password_md5: str, password_hash: str) -> bool:
     """Verify MD5 password against stored bcrypt hash."""
     salted = PASSWORD_SALT + password_md5.encode()
-    return bcrypt.checkpw(salted, password_hash.encode())
+    # bcrypt has a max input length of 72 bytes
+    return bcrypt.checkpw(salted[:72], password_hash.encode())
 
 
 def get_current_user(

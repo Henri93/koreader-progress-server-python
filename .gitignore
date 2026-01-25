@@ -39,3 +39,7 @@ terraform/plan.out
 
 # AWS
 .aws/
+
+# Local scripts
+add_user.py
+typing_extensions.py

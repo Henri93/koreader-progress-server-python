@@ -10,6 +10,7 @@ os.environ["DATABASE_URL"] = "sqlite:///./test_data/test.db"
 os.environ["PASSWORD_SALT"] = "test-salt"
 
 from database import Base, engine
+import models  # noqa: F401 - Required to register models with Base.metadata
 from main import app
 
 
