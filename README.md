@@ -5,7 +5,15 @@
 
 A simple Python/FastAPI server for syncing reading progress across KOReader devices.
 
-## Running Sync Server
+## Quick Start (Hosted Server)
+
+Don't want to deploy your own? Use the public sync server:
+
+**`https://null-space.xyz/reader`**
+
+Just point your KOReader or Readest app to this URL and create an account.
+
+## Running Sync Server (Self-Hosted)
 
 ### Local Development
 
@@ -22,12 +30,69 @@ uvicorn main:app --reload --port 8080
 docker compose up -d
 ```
 
+### AWS Lambda
+
+Deploy as a serverless Lambda function with DynamoDB storage.
+
+#### Prerequisites
+
+- AWS CLI configured with credentials
+- Terraform >= 1.0
+- Python 3.12
+
+#### One-Time Bootstrap
+
+Create the shared S3 bucket for Terraform state:
+
+```bash
+cd deployment
+./bootstrap.sh
+```
+
+#### Deploy
+
+1. Create terraform variables file:
+
+```bash
+cp deployment/terraform.tfvars.example terraform/terraform.tfvars
+```
+
+2. Edit `terraform/terraform.tfvars` with your password salt:
+
+```hcl
+password_salt = "your-secure-random-salt"  # Generate with: openssl rand -hex 32
+```
+
+3. Build and deploy:
+
+```bash
+./deployment/deploy.sh
+```
+
+This creates:
+- Lambda function (`reader-progress-prod`)
+- DynamoDB tables (`reader-progress-prod-users`, `reader-progress-prod-progress`)
+- IAM role with minimal permissions
+
 ## Configuration
+
+### Docker / Local Development
 
 | Environment Variable | Default | Description |
 |---------------------|---------|-------------|
-| PASSWORD_SALT | `default-salt-change-me` | Salt prepended to passwords before hashing |
-| DATABASE_URL | `sqlite:///./data/koreader.db` | SQLite database path |
+| `DB_BACKEND` | `sql` | Database backend (`sql` or `dynamodb`) |
+| `PASSWORD_SALT` | `default-salt-change-me` | Salt prepended to passwords before hashing |
+| `DATABASE_URL` | `sqlite:///./data/koreader.db` | SQLite/PostgreSQL database URL |
+
+### AWS Lambda
+
+| Environment Variable | Description |
+|---------------------|-------------|
+| `DB_BACKEND` | Set to `dynamodb` |
+| `PASSWORD_SALT` | Salt for password hashing (set via Terraform) |
+| `DYNAMODB_USERS_TABLE` | Users table name (set via Terraform) |
+| `DYNAMODB_PROGRESS_TABLE` | Progress table name (set via Terraform) |
+| `AWS_REGION` | AWS region (set via Terraform) |
 
 ## KOReader Setup
 
@@ -77,7 +142,9 @@ The document hash ensures the same book is identified across devices regardless 
 
 ## Database Structure
 
-### Users Table
+### SQLite/PostgreSQL (Docker/Local)
+
+#### Users Table
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -85,7 +152,7 @@ The document hash ensures the same book is identified across devices regardless 
 | username | TEXT | Unique username |
 | password_hash | TEXT | Bcrypt hash of salted MD5 password |
 
-### Progress Table
+#### Progress Table
 
 | Column | Type | Description |
 |--------|------|-------------|
@@ -99,6 +166,27 @@ The document hash ensures the same book is identified across devices regardless 
 | timestamp | INTEGER | Unix timestamp of last update |
 
 **Key constraint**: One progress record per (user_id, document) pair. Updates replace existing records.
+
+### DynamoDB (AWS Lambda)
+
+#### Users Table
+
+| Attribute | Type | Key |
+|-----------|------|-----|
+| username | String | Partition Key |
+| password_hash | String | - |
+
+#### Progress Table
+
+| Attribute | Type | Key |
+|-----------|------|-----|
+| user_id | String | Partition Key |
+| document | String | Sort Key |
+| progress | String | - |
+| percentage | Number | - |
+| device | String | - |
+| device_id | String | - |
+| timestamp | Number | - |
 
 ## API Reference
 

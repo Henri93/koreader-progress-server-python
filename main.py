@@ -1,16 +1,20 @@
+import os
 import time
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException
-from sqlalchemy.orm import Session
 
-from database import get_db, init_db
-from models import User, Progress, UserCreate, ProgressUpdate, ProgressResponse
+from schemas import UserCreate, ProgressUpdate, ProgressResponse
+from repositories import get_user_repository, get_progress_repository
+from repositories.protocols import UserEntity, ProgressEntity
 from auth import hash_password, get_current_user
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    init_db()
+    # Only initialize SQL database if using SQL backend
+    if os.getenv("DB_BACKEND", "sql") == "sql":
+        from database import init_db
+        init_db()
     yield
 
 
@@ -28,32 +32,29 @@ def healthcheck():
 
 
 @app.post("/users/create", status_code=201)
-def create_user(user: UserCreate, db: Session = Depends(get_db)):
+def create_user(user: UserCreate, user_repo=Depends(get_user_repository)):
     if not user.username or not user.password:
         raise HTTPException(status_code=400, detail="Username and password are required")
 
-    existing = db.query(User).filter(User.username == user.username).first()
-    if existing:
+    if user_repo.exists(user.username):
         raise HTTPException(status_code=402, detail="Username already exists")
 
     # KOReader sends password as MD5 hash during registration, so don't double-hash
-    db_user = User(username=user.username, password_hash=hash_password(user.password))
-    db.add(db_user)
-    db.commit()
+    user_repo.create(user.username, hash_password(user.password))
 
     return {"status": "success"}
 
 
 @app.get("/users/auth")
-def auth_user(user: User = Depends(get_current_user)):
+def auth_user(user: UserEntity = Depends(get_current_user)):
     return {"status": "authenticated"}
 
 
 @app.put("/syncs/progress")
 def update_progress(
     progress_data: ProgressUpdate,
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    user: UserEntity = Depends(get_current_user),
+    progress_repo=Depends(get_progress_repository),
 ):
     if not all([
         progress_data.document,
@@ -64,45 +65,27 @@ def update_progress(
     ]):
         raise HTTPException(status_code=400, detail="Missing required fields")
 
-    existing = (
-        db.query(Progress)
-        .filter(Progress.user_id == user.id, Progress.document == progress_data.document)
-        .first()
+    progress_entity = ProgressEntity(
+        user_id=user.id,
+        document=progress_data.document,
+        progress=progress_data.progress,
+        percentage=progress_data.percentage,
+        device=progress_data.device,
+        device_id=progress_data.device_id,
+        timestamp=int(time.time()),
     )
 
-    if existing:
-        existing.progress = progress_data.progress
-        existing.percentage = progress_data.percentage
-        existing.device = progress_data.device
-        existing.device_id = progress_data.device_id
-        existing.timestamp = int(time.time())
-    else:
-        db_progress = Progress(
-            user_id=user.id,
-            document=progress_data.document,
-            progress=progress_data.progress,
-            percentage=progress_data.percentage,
-            device=progress_data.device,
-            device_id=progress_data.device_id,
-        )
-        db.add(db_progress)
-
-    db.commit()
+    progress_repo.upsert(progress_entity)
     return {"status": "success"}
 
 
 @app.get("/syncs/progress/{document}")
 def get_progress(
     document: str,
-    user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    user: UserEntity = Depends(get_current_user),
+    progress_repo=Depends(get_progress_repository),
 ):
-    progress = (
-        db.query(Progress)
-        .filter(Progress.user_id == user.id, Progress.document == document)
-        .order_by(Progress.timestamp.desc())
-        .first()
-    )
+    progress = progress_repo.get_by_user_and_document(user.id, document)
 
     if not progress:
         raise HTTPException(status_code=404, detail="Progress not found")

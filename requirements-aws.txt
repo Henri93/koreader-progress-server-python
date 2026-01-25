@@ -1,0 +1,12 @@
+# Core FastAPI dependencies for AWS Lambda
+fastapi==0.109.0
+bcrypt==4.1.2
+python-dotenv==1.0.0
+
+# AWS Lambda adapter
+mangum>=0.17.0
+
+# AWS SDK for DynamoDB
+boto3>=1.34.0
+
+# Note: uvicorn and sqlalchemy not needed for Lambda/DynamoDB deployment

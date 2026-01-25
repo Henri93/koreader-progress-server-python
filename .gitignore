@@ -24,3 +24,17 @@ test_data/
 # OS
 .DS_Store
 Thumbs.db
+
+# Deployment artifacts
+deployment/lambda_package.zip
+
+# Terraform
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/*.tfvars
+terraform/plan.out
+
+# AWS
+.aws/

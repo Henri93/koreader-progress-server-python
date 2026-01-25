@@ -3,9 +3,9 @@ import logging
 import hashlib
 import bcrypt
 from fastapi import Header, HTTPException, Depends
-from sqlalchemy.orm import Session
-from database import get_db
-from models import User
+
+from repositories import get_user_repository
+from repositories.protocols import UserEntity
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -33,15 +33,15 @@ def verify_password(password_md5: str, password_hash: str) -> bool:
 def get_current_user(
     x_auth_user: str = Header(None),
     x_auth_key: str = Header(None),
-    db: Session = Depends(get_db),
-) -> User:
+    user_repo=Depends(get_user_repository),
+) -> UserEntity:
     key_hint = f"'{x_auth_key[:8]}...' len={len(x_auth_key)}" if x_auth_key else "None"
     logger.debug(f"Auth: user='{x_auth_user}' key={key_hint}")
 
     if not x_auth_user or not x_auth_key:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-    user = db.query(User).filter(User.username == x_auth_user).first()
+    user = user_repo.get_by_username(x_auth_user)
     if not user:
         logger.debug(f"User '{x_auth_user}' not found")
         raise HTTPException(status_code=401, detail="Unauthorized")

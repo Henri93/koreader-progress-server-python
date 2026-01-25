@@ -1,0 +1,14 @@
+# Copy this file to terraform/terraform.tfvars and fill in the values
+
+# AWS region for deployment
+aws_region = "us-east-1"
+
+# Project name (used as prefix for all resources)
+project_name = "reader-progress"
+
+# Environment (dev, staging, prod)
+environment = "prod"
+
+# Password salt for bcrypt hashing (keep this secret!)
+# Generate with: openssl rand -hex 32
+password_salt = "your-secure-random-salt-here"
