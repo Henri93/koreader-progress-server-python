@@ -12,21 +12,9 @@ echo "Building Lambda package..."
 rm -rf "$BUILD_DIR"
 mkdir -p "$BUILD_DIR"
 
-# Check if Docker is available for cross-platform build
-if command -v docker &> /dev/null; then
-    echo "Using Docker for cross-platform build (Amazon Linux 2023)..."
-
-    # Install dependencies using Lambda Python image
-    docker run --rm \
-        --entrypoint "" \
-        -v "$PROJECT_ROOT:/var/task" \
-        -v "$BUILD_DIR:/var/build" \
-        public.ecr.aws/lambda/python:3.12 \
-        pip install -r /var/task/requirements-aws.txt -t /var/build --quiet --upgrade
-else
-    echo "Docker not found, using local pip (may not work on Lambda)..."
-    pip3 install -r "$PROJECT_ROOT/requirements-aws.txt" -t "$BUILD_DIR" --quiet --upgrade
-fi
+# Install dependencies
+echo "Installing Python dependencies..."
+pip3 install -r "$PROJECT_ROOT/requirements-aws.txt" -t package/ --quiet
 
 # Copy application code
 echo "Copying application code..."

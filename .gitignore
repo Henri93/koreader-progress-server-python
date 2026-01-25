@@ -27,6 +27,7 @@ Thumbs.db
 
 # Deployment artifacts
 deployment/lambda_package.zip
+package/*
 
 # Terraform
 terraform/.terraform/
