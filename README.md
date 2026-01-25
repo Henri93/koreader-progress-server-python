@@ -111,7 +111,16 @@ x-auth-user: <username>
 x-auth-key: <md5_hash_of_password>
 ```
 
-**Note:** KOReader sends passwords as MD5 hashes. When using curl or other clients, you must send the MD5 hash of the password, not the raw password.
+### Password Format
+
+KOReader sends passwords as MD5 hashes in all requests (both registration and authentication). The server then applies additional salting and bcrypt hashing before storage.
+
+**Password flow:**
+1. Client computes `MD5(raw_password)`
+2. Client sends MD5 hash to server (in JSON body for registration, in `x-auth-key` header for auth)
+3. Server stores `bcrypt(salt + md5_hash)` in database
+
+When using curl or other clients, you must send the MD5 hash of the password, not the raw password:
 
 ```bash
 # Generate MD5 hash of password
@@ -124,10 +133,13 @@ echo -n "mypass" | md5sum | cut -d' ' -f1  # Linux
 #### POST /users/create
 Register a new user account.
 
+**Note:** KOReader sends the password as an MD5 hash during registration. When using curl or other clients, you must send the MD5 hash of your password, not the raw password.
+
 ```bash
+# MD5 of "mypass" is a029d0df84eb5549c641e04a9ef389e5
 curl -X POST http://localhost:8080/users/create \
   -H "Content-Type: application/json" \
-  -d '{"username": "myuser", "password": "mypass"}'
+  -d '{"username": "myuser", "password": "a029d0df84eb5549c641e04a9ef389e5"}'
 ```
 
 Response: `{"status": "success"}` (201) or `{"detail": "Username already exists"}` (402)
