@@ -13,6 +13,30 @@ Don't want to deploy your own? Use the public sync server:
 
 Just point your KOReader or Readest app to this URL and create an account.
 
+> [!WARNING]
+> **Kindle Sync Timeout Issue**
+>
+> If you can login from KOReader on Kindle but sync fails with "something went wrong when syncing progress", you may need to increase KOReader's sync timeout. This commonly happens when using serverless backends (like AWS Lambda) that have cold start delays. If more people use this service, I can make it more available to improve response times.
+>
+> **Symptoms:**
+> - Login works, but push/pull progress fails/isn't working
+> - KOReader debug log shows: `KOSyncClient:update_progress failure: common/Spore/Protocols.lua:85: wantread`
+>
+> **Fix:**
+> 1. Connect your Kindle to your computer via USB
+> 2. Open the file: `<Kindle>/koreader/plugins/kosync.koplugin/KOSyncClient.lua`
+> 3. Find this line near the top (around line 6):
+>    ```lua
+>    local PROGRESS_TIMEOUTS = { 2,  5 }
+>    ```
+> 4. Change it to:
+>    ```lua
+>    local PROGRESS_TIMEOUTS = { 5, 15 }
+>    ```
+> 5. Save the file, eject Kindle, and restart KOReader
+>
+> This increases the sync timeout from 5 seconds to 15 seconds, giving the server enough time to respond during cold starts.
+
 ## Running Sync Server (Self-Hosted)
 
 ### Local Development
