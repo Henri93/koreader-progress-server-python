@@ -23,6 +23,16 @@ class Progress(Base):
     device = Column(String, nullable=False)
     device_id = Column(String, nullable=False)
     timestamp = Column(Integer, default=lambda: int(time.time()))
+    filename = Column(String, nullable=True, index=True)
+
+
+class DocumentLink(Base):
+    __tablename__ = "document_links"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    document_hash = Column(String, nullable=False, index=True)
+    canonical_hash = Column(String, nullable=False)
 
 
 class UserCreate(BaseModel):

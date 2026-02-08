@@ -20,6 +20,15 @@ class ProgressEntity:
     device: str
     device_id: str
     timestamp: int
+    filename: Optional[str] = None
+
+
+@dataclass
+class DocumentLinkEntity:
+    """Database-agnostic document link representation."""
+    user_id: str
+    document_hash: str
+    canonical_hash: str
 
 
 class UserRepository(Protocol):
@@ -47,6 +56,42 @@ class ProgressRepository(Protocol):
         """Get progress for a specific user and document."""
         ...
 
+    def get_by_user_and_filename(
+        self, user_id: str, filename: str
+    ) -> Optional[ProgressEntity]:
+        """Get progress for a specific user and filename."""
+        ...
+
+    def get_all_by_user_and_filename(
+        self, user_id: str, filename: str
+    ) -> list[ProgressEntity]:
+        """Get all progress records for a specific user and filename."""
+        ...
+
     def upsert(self, progress: ProgressEntity) -> ProgressEntity:
         """Insert or update progress record."""
+        ...
+
+
+class DocumentLinkRepository(Protocol):
+    """Protocol for document link data access."""
+
+    def get_canonical(self, user_id: str, document_hash: str) -> Optional[str]:
+        """Get canonical hash for a document hash. Returns None if no link exists."""
+        ...
+
+    def create_link(self, user_id: str, document_hash: str, canonical_hash: str) -> DocumentLinkEntity:
+        """Create a link from document_hash to canonical_hash."""
+        ...
+
+    def get_all_links(self, user_id: str) -> list[DocumentLinkEntity]:
+        """Get all document links for a user."""
+        ...
+
+    def delete_link(self, user_id: str, document_hash: str) -> bool:
+        """Delete a link. Returns True if deleted, False if not found."""
+        ...
+
+    def get_linked_hashes(self, user_id: str, canonical_hash: str) -> list[str]:
+        """Get all hashes linked to a canonical hash."""
         ...

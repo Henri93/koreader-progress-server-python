@@ -1,7 +1,7 @@
 import os
 from typing import Generator
 
-from repositories.protocols import UserRepository, ProgressRepository
+from repositories.protocols import UserRepository, ProgressRepository, DocumentLinkRepository
 
 DB_BACKEND = os.getenv("DB_BACKEND", "sql")
 
@@ -32,5 +32,20 @@ def get_progress_repository() -> Generator[ProgressRepository, None, None]:
         db = next(get_db())
         try:
             yield SQLProgressRepository(db)
+        finally:
+            db.close()
+
+
+def get_document_link_repository() -> Generator[DocumentLinkRepository, None, None]:
+    """Factory for document link repository based on DB_BACKEND environment variable."""
+    if DB_BACKEND == "dynamodb":
+        from repositories.dynamodb import DynamoDocumentLinkRepository
+        yield DynamoDocumentLinkRepository()
+    else:
+        from database import get_db
+        from repositories.sql import SQLDocumentLinkRepository
+        db = next(get_db())
+        try:
+            yield SQLDocumentLinkRepository(db)
         finally:
             db.close()
