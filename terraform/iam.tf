@@ -43,11 +43,13 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
           "dynamodb:GetItem",
           "dynamodb:Query",
           "dynamodb:UpdateItem",
-          "dynamodb:DeleteItem"
+          "dynamodb:DeleteItem",
+          "dynamodb:Scan"
         ]
         Resource = [
           aws_dynamodb_table.users.arn,
-          aws_dynamodb_table.progress.arn
+          aws_dynamodb_table.progress.arn,
+          aws_dynamodb_table.document_links.arn
         ]
       }
     ]

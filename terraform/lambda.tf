@@ -12,10 +12,11 @@ resource "aws_lambda_function" "api" {
 
   environment {
     variables = {
-      DB_BACKEND              = "dynamodb"
-      DYNAMODB_USERS_TABLE    = aws_dynamodb_table.users.name
-      DYNAMODB_PROGRESS_TABLE = aws_dynamodb_table.progress.name
-      PASSWORD_SALT           = var.password_salt
+      DB_BACKEND                    = "dynamodb"
+      DYNAMODB_USERS_TABLE          = aws_dynamodb_table.users.name
+      DYNAMODB_PROGRESS_TABLE       = aws_dynamodb_table.progress.name
+      DYNAMODB_DOCUMENT_LINKS_TABLE = aws_dynamodb_table.document_links.name
+      PASSWORD_SALT                 = var.password_salt
     }
   }
 
