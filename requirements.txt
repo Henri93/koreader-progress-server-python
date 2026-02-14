@@ -3,6 +3,7 @@ uvicorn[standard]==0.27.0
 sqlalchemy>=2.0.36
 bcrypt==4.1.2
 python-dotenv==1.0.0
+slowapi>=0.1.9
 
 # Testing
 behave==1.2.6

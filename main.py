@@ -1,9 +1,14 @@
 import os
 import time
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Depends, HTTPException
-
+from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.responses import Response
+from fastapi.exceptions import RequestValidationError
+from starlette.middleware.base import BaseHTTPMiddleware
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+
 from schemas import (
     UserCreate, ProgressUpdate, ProgressResponse, LinkRequest, LinkResponse,
     DocumentLinkResponse, BookSummary, BooksListResponse, BookLabelUpdate, BookLabelResponse
@@ -12,6 +17,22 @@ from repositories import get_user_repository, get_progress_repository, get_docum
 from svg_card import render_progress_card
 from repositories.protocols import UserEntity, ProgressEntity
 from auth import hash_password, get_current_user
+
+
+# Rate limiter - disabled in test mode
+_rate_limit_enabled = os.getenv("RATE_LIMIT_ENABLED", "true").lower() == "true"
+limiter = Limiter(key_func=get_remote_address, enabled=_rate_limit_enabled)
+
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Add security headers to all responses."""
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        return response
 
 
 @asynccontextmanager
@@ -24,6 +45,27 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="KOReader Sync Server", lifespan=lifespan)
+app.state.limiter = limiter
+app.add_middleware(SecurityHeadersMiddleware)
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return Response(
+        content='{"detail": "Rate limit exceeded"}',
+        status_code=429,
+        media_type="application/json"
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    # Return 400 Bad Request for validation errors (KOReader compatibility)
+    return Response(
+        content='{"detail": "Invalid request data"}',
+        status_code=400,
+        media_type="application/json"
+    )
 
 
 @app.get("/health")
@@ -37,10 +79,8 @@ def healthcheck():
 
 
 @app.post("/users/create", status_code=201)
-def create_user(user: UserCreate, user_repo=Depends(get_user_repository)):
-    if not user.username or not user.password:
-        raise HTTPException(status_code=400, detail="Username and password are required")
-
+@limiter.limit("5/minute")
+def create_user(request: Request, user: UserCreate, user_repo=Depends(get_user_repository)):
     if user_repo.exists(user.username):
         raise HTTPException(status_code=402, detail="Username already exists")
 
@@ -51,7 +91,8 @@ def create_user(user: UserCreate, user_repo=Depends(get_user_repository)):
 
 
 @app.get("/users/auth")
-def auth_user(user: UserEntity = Depends(get_current_user)):
+@limiter.limit("10/minute")
+def auth_user(request: Request, user: UserEntity = Depends(get_current_user)):
     return {"status": "authenticated"}
 
 
@@ -207,6 +248,8 @@ def unlink_document(
 
 @app.get("/books")
 def list_books(
+    limit: int = 50,
+    offset: int = 0,
     user: UserEntity = Depends(get_current_user),
     progress_repo=Depends(get_progress_repository),
     link_repo=Depends(get_document_link_repository),
@@ -254,7 +297,9 @@ def list_books(
             )
 
     sorted_books = sorted(books.values(), key=lambda b: b.timestamp, reverse=True)
-    return BooksListResponse(books=sorted_books)
+    # Apply pagination
+    paginated_books = sorted_books[offset:offset + limit]
+    return BooksListResponse(books=paginated_books)
 
 
 @app.put("/books/label")
