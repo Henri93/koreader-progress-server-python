@@ -26,6 +26,7 @@ cp "$PROJECT_ROOT/main.py" "$BUILD_DIR/"
 cp "$PROJECT_ROOT/auth.py" "$BUILD_DIR/"
 cp "$PROJECT_ROOT/schemas.py" "$BUILD_DIR/"
 cp "$PROJECT_ROOT/lambda_handler.py" "$BUILD_DIR/"
+cp "$PROJECT_ROOT/svg_card.py" "$BUILD_DIR/"
 cp -r "$PROJECT_ROOT/repositories" "$BUILD_DIR/"
 
 # Create zip
