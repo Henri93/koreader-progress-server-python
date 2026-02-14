@@ -1,6 +1,7 @@
 """SVG progress card generator for GitHub README embedding."""
 
 from typing import TYPE_CHECKING
+from datetime import datetime
 import html
 
 if TYPE_CHECKING:
@@ -11,7 +12,7 @@ def render_progress_card(books: list["BookSummary"]) -> str:
     """Render an SVG progress card showing reading progress."""
     card_width = 400
     header_height = 40
-    book_height = 50
+    book_height = 65
     padding = 16
     card_height = header_height + (len(books) * book_height) + padding
 
@@ -25,6 +26,7 @@ def render_progress_card(books: list["BookSummary"]) -> str:
         '  .header { fill: #24292f; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 14px; font-weight: 600; }',
         '  .book-title { fill: #24292f; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 12px; }',
         '  .percentage { fill: #57606a; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 11px; }',
+        '  .date { fill: #8b949e; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; font-size: 10px; }',
         '  .progress-bg { fill: #e1e4e8; rx: 3; }',
         '  .progress-fill { fill: #2da44e; rx: 3; }',
         '</style>',
@@ -48,11 +50,15 @@ def render_progress_card(books: list["BookSummary"]) -> str:
             progress_width = int((card_width - padding * 2 - 50) * (percentage / 100))
             bar_width = card_width - padding * 2 - 50
 
+            # Format the timestamp as a readable date
+            last_updated = datetime.fromtimestamp(book.timestamp).strftime("%b %d, %Y")
+
             svg_parts.extend([
                 f'<text class="book-title" x="{padding}" y="{y_offset}">{title}</text>',
                 f'<text class="percentage" x="{card_width - padding}" y="{y_offset}" text-anchor="end">{percentage:.0f}%</text>',
                 f'<rect class="progress-bg" x="{padding}" y="{y_offset + 8}" width="{bar_width}" height="6"/>',
                 f'<rect class="progress-fill" x="{padding}" y="{y_offset + 8}" width="{progress_width}" height="6"/>',
+                f'<text class="date" x="{padding}" y="{y_offset + 26}">Last read: {last_updated}</text>',
             ])
 
     svg_parts.append('</svg>')
