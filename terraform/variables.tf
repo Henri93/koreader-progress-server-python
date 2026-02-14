@@ -21,3 +21,21 @@ variable "password_salt" {
   type        = string
   sensitive   = true
 }
+
+variable "enable_custom_domain" {
+  description = "Enable custom domain with CloudFront"
+  type        = bool
+  default     = false
+}
+
+variable "api_domain_name" {
+  description = "Custom domain name for the API (e.g., api.null-space.xyz)"
+  type        = string
+  default     = ""
+}
+
+variable "certificate_arn" {
+  description = "ACM certificate ARN for the custom domain"
+  type        = string
+  default     = ""
+}

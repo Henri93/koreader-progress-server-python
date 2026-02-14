@@ -16,6 +16,7 @@ resource "aws_lambda_function" "api" {
       DYNAMODB_USERS_TABLE          = aws_dynamodb_table.users.name
       DYNAMODB_PROGRESS_TABLE       = aws_dynamodb_table.progress.name
       DYNAMODB_DOCUMENT_LINKS_TABLE = aws_dynamodb_table.document_links.name
+      DYNAMODB_BOOK_LABELS_TABLE    = aws_dynamodb_table.book_labels.name
       PASSWORD_SALT                 = var.password_salt
     }
   }
@@ -29,5 +30,19 @@ resource "aws_lambda_function" "api" {
     Name        = "${var.project_name}-lambda"
     Environment = var.environment
     Project     = var.project_name
+  }
+}
+
+# Lambda function URL for direct access and CloudFront origin
+resource "aws_lambda_function_url" "api" {
+  function_name      = aws_lambda_function.api.function_name
+  authorization_type = "NONE"
+
+  cors {
+    allow_credentials = false
+    allow_headers     = ["*"]
+    allow_methods     = ["*"]
+    allow_origins     = ["*"]
+    max_age           = 86400
   }
 }
