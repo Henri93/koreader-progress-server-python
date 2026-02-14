@@ -2,6 +2,7 @@
 fastapi==0.109.0
 bcrypt>=4.1.2
 python-dotenv==1.0.0
+slowapi>=0.1.9
 
 # AWS Lambda adapter
 mangum>=0.17.0
