@@ -214,62 +214,100 @@ The document hash ensures the same book is identified across devices regardless 
 
 ## API Reference
 
+> **Interactive API Docs**: This server uses FastAPI which auto-generates OpenAPI documentation.
+> - **Swagger UI**: `http://your-server:8080/docs` — Interactive API explorer
+> - **ReDoc**: `http://your-server:8080/redoc` — Clean reference documentation
+> - **OpenAPI JSON**: `http://your-server:8080/openapi.json` — Machine-readable spec
+
+---
+
 ### Authentication
 
-All endpoints except `/users/create` and `/health` require authentication via headers:
+All endpoints except `/users/create`, `/health`, `/healthcheck`, and `/card/{username}` require authentication via HTTP headers:
 
-```
-x-auth-user: <username>
-x-auth-key: <md5_hash_of_password>
-```
-
-### Password Format
-
-KOReader sends passwords as MD5 hashes in all requests (both registration and authentication). The server then applies additional salting and bcrypt hashing before storage.
+| Header | Value | Description |
+|--------|-------|-------------|
+| `x-auth-user` | `<username>` | Your registered username |
+| `x-auth-key` | `<md5_hash>` | MD5 hash of your password |
 
 **Password flow:**
 1. Client computes `MD5(raw_password)`
 2. Client sends MD5 hash to server (in JSON body for registration, in `x-auth-key` header for auth)
 3. Server stores `bcrypt(salt + md5_hash)` in database
 
-When using curl or other clients, you must send the MD5 hash of the password, not the raw password:
-
 ```bash
 # Generate MD5 hash of password
-echo -n "mypass" | md5  # macOS
-echo -n "mypass" | md5sum | cut -d' ' -f1  # Linux
+echo -n "mypass" | md5                      # macOS
+echo -n "mypass" | md5sum | cut -d' ' -f1   # Linux
+# Result: a029d0df84eb5549c641e04a9ef389e5
 ```
+
+---
 
 ### Endpoints
 
-#### POST /users/create
+#### Health Check
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/health` | No | Returns `{"status": "ok"}` |
+| GET | `/healthcheck` | No | Returns `{"state": "OK"}` |
+
+---
+
+#### User Management
+
+##### POST `/users/create`
+
 Register a new user account.
 
-**Note:** KOReader sends the password as an MD5 hash during registration. When using curl or other clients, you must send the MD5 hash of your password, not the raw password.
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `username` | string | Yes | Unique username |
+| `password` | string | Yes | MD5 hash of password |
 
 ```bash
-# MD5 of "mypass" is a029d0df84eb5549c641e04a9ef389e5
 curl -X POST http://localhost:8080/users/create \
   -H "Content-Type: application/json" \
   -d '{"username": "myuser", "password": "a029d0df84eb5549c641e04a9ef389e5"}'
 ```
 
-Response: `{"status": "success"}` (201) or `{"detail": "Username already exists"}` (402)
+| Status | Response |
+|--------|----------|
+| 201 | `{"status": "success"}` |
+| 402 | `{"detail": "Username already exists"}` |
 
-#### GET /users/auth
+##### GET `/users/auth`
+
 Verify credentials are valid.
 
 ```bash
-# MD5 of "mypass" is a029d0df84eb5549c641e04a9ef389e5
 curl http://localhost:8080/users/auth \
   -H "x-auth-user: myuser" \
   -H "x-auth-key: a029d0df84eb5549c641e04a9ef389e5"
 ```
 
-Response: `{"status": "authenticated"}` (200) or `{"detail": "Unauthorized"}` (401)
+| Status | Response |
+|--------|----------|
+| 200 | `{"status": "authenticated"}` |
+| 401 | `{"detail": "Unauthorized"}` |
 
-#### PUT /syncs/progress
+---
+
+#### Progress Sync
+
+##### PUT `/syncs/progress`
+
 Update reading progress for a document.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `document` | string | Yes | MD5 hash of the document file |
+| `progress` | string | Yes | Reading position (XPath or page) |
+| `percentage` | float | Yes | Progress 0.0–1.0 |
+| `device` | string | Yes | Device name |
+| `device_id` | string | Yes | Unique device identifier |
+| `filename` | string | No | Book filename (used for auto-linking) |
 
 ```bash
 curl -X PUT http://localhost:8080/syncs/progress \
@@ -285,10 +323,17 @@ curl -X PUT http://localhost:8080/syncs/progress \
   }'
 ```
 
-Response: `{"status": "success"}` (200)
+| Status | Response |
+|--------|----------|
+| 200 | `{"status": "success"}` |
 
-#### GET /syncs/progress/{document}
+##### GET `/syncs/progress/{document}`
+
 Retrieve the latest progress for a document.
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `document` | string | MD5 hash of the document |
 
 ```bash
 curl http://localhost:8080/syncs/progress/0b229176d4e8db7f6d2b5a4952368d7a \
@@ -296,7 +341,7 @@ curl http://localhost:8080/syncs/progress/0b229176d4e8db7f6d2b5a4952368d7a \
   -H "x-auth-key: a029d0df84eb5549c641e04a9ef389e5"
 ```
 
-Response:
+**Response (200):**
 ```json
 {
   "document": "0b229176d4e8db7f6d2b5a4952368d7a",
@@ -308,8 +353,170 @@ Response:
 }
 ```
 
-#### GET /health, GET /healthcheck
-Health check endpoints for monitoring.
+| Status | Response |
+|--------|----------|
+| 200 | Progress object |
+| 404 | `{"detail": "Progress not found"}` |
+
+---
+
+#### Document Linking
+
+Link multiple document hashes together (e.g., same book in different formats like EPUB and MOBI).
+
+##### POST `/documents/link`
+
+Link multiple document hashes to a canonical hash.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `hashes` | string[] | Yes | Array of document hashes (min 2) |
+
+```bash
+curl -X POST http://localhost:8080/documents/link \
+  -H "Content-Type: application/json" \
+  -H "x-auth-user: myuser" \
+  -H "x-auth-key: a029d0df84eb5549c641e04a9ef389e5" \
+  -d '{"hashes": ["hash1abc", "hash2def", "hash3ghi"]}'
+```
+
+**Response (201):**
+```json
+{
+  "canonical": "hash1abc",
+  "linked": ["hash1abc", "hash2def", "hash3ghi"]
+}
+```
+
+##### GET `/documents/links`
+
+List all document links for the authenticated user.
+
+```bash
+curl http://localhost:8080/documents/links \
+  -H "x-auth-user: myuser" \
+  -H "x-auth-key: a029d0df84eb5549c641e04a9ef389e5"
+```
+
+**Response (200):**
+```json
+[
+  {"document_hash": "hash2def", "canonical_hash": "hash1abc"},
+  {"document_hash": "hash3ghi", "canonical_hash": "hash1abc"}
+]
+```
+
+##### DELETE `/documents/link/{document_hash}`
+
+Remove a document link.
+
+```bash
+curl -X DELETE http://localhost:8080/documents/link/hash2def \
+  -H "x-auth-user: myuser" \
+  -H "x-auth-key: a029d0df84eb5549c641e04a9ef389e5"
+```
+
+| Status | Response |
+|--------|----------|
+| 200 | `{"status": "success"}` |
+| 404 | `{"detail": "Link not found"}` |
+
+---
+
+#### Book Management
+
+##### GET `/books`
+
+List all books with progress information.
+
+```bash
+curl http://localhost:8080/books \
+  -H "x-auth-user: myuser" \
+  -H "x-auth-key: a029d0df84eb5549c641e04a9ef389e5"
+```
+
+**Response (200):**
+```json
+{
+  "books": [
+    {
+      "canonical_hash": "0b229176d4e8db7f6d2b5a4952368d7a",
+      "linked_hashes": ["hash2def"],
+      "label": "The Great Gatsby",
+      "filename": "gatsby.epub",
+      "progress": "/body/p[42]",
+      "percentage": 0.75,
+      "device": "Kindle Paperwhite",
+      "device_id": "A1B2C3D4",
+      "timestamp": 1706123456
+    }
+  ]
+}
+```
+
+##### PUT `/books/label`
+
+Set a custom label/name for a book.
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `canonical_hash` | string | Yes | The book's canonical document hash |
+| `label` | string | Yes | Custom display name |
+
+```bash
+curl -X PUT http://localhost:8080/books/label \
+  -H "Content-Type: application/json" \
+  -H "x-auth-user: myuser" \
+  -H "x-auth-key: a029d0df84eb5549c641e04a9ef389e5" \
+  -d '{"canonical_hash": "0b229176d4e8db7f6d2b5a4952368d7a", "label": "The Great Gatsby"}'
+```
+
+**Response (200):**
+```json
+{
+  "canonical_hash": "0b229176d4e8db7f6d2b5a4952368d7a",
+  "label": "The Great Gatsby"
+}
+```
+
+##### DELETE `/books/label/{canonical_hash}`
+
+Remove a book's custom label.
+
+```bash
+curl -X DELETE http://localhost:8080/books/label/0b229176d4e8db7f6d2b5a4952368d7a \
+  -H "x-auth-user: myuser" \
+  -H "x-auth-key: a029d0df84eb5549c641e04a9ef389e5"
+```
+
+| Status | Response |
+|--------|----------|
+| 200 | `{"status": "success"}` |
+| 404 | `{"detail": "Label not found"}` |
+
+---
+
+#### Progress Card (Public)
+
+##### GET `/card/{username}`
+
+Generate an embeddable SVG progress card showing reading activity.
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `username` | string | — | Username (path parameter) |
+| `limit` | int | 5 | Number of books to display (query param) |
+
+```bash
+curl http://localhost:8080/card/myuser?limit=3
+```
+
+**Response:** SVG image (`image/svg+xml`)
+
+**Embed in GitHub README:**
+```markdown
+![Reading Progress](https://your-server.com/reader/card/myuser)
+```
 
 ## References
 
