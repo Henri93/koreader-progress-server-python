@@ -1,7 +1,7 @@
 from typing import Optional
 from sqlalchemy.orm import Session
-from models import User, Progress, DocumentLink
-from repositories.protocols import UserEntity, ProgressEntity, DocumentLinkEntity
+from models import User, Progress, DocumentLink, BookLabel
+from repositories.protocols import UserEntity, ProgressEntity, DocumentLinkEntity, BookLabelEntity
 
 
 class SQLUserRepository:
@@ -141,6 +141,27 @@ class SQLProgressRepository:
         self.db.commit()
         return progress
 
+    def get_all_by_user(self, user_id: str) -> list[ProgressEntity]:
+        records = (
+            self.db.query(Progress)
+            .filter(Progress.user_id == int(user_id))
+            .order_by(Progress.timestamp.desc())
+            .all()
+        )
+        return [
+            ProgressEntity(
+                user_id=str(p.user_id),
+                document=p.document,
+                progress=p.progress,
+                percentage=p.percentage,
+                device=p.device,
+                device_id=p.device_id,
+                timestamp=p.timestamp,
+                filename=p.filename
+            )
+            for p in records
+        ]
+
 
 class SQLDocumentLinkRepository:
     """SQLAlchemy-based document link repository."""
@@ -210,3 +231,71 @@ class SQLDocumentLinkRepository:
             .all()
         )
         return [link.document_hash for link in links]
+
+
+class SQLBookLabelRepository:
+    """SQLAlchemy-based book label repository."""
+
+    def __init__(self, db: Session):
+        self.db = db
+
+    def get_label(self, user_id: str, canonical_hash: str) -> Optional[str]:
+        label = (
+            self.db.query(BookLabel)
+            .filter(
+                BookLabel.user_id == int(user_id),
+                BookLabel.canonical_hash == canonical_hash
+            )
+            .first()
+        )
+        return label.label if label else None
+
+    def set_label(self, user_id: str, canonical_hash: str, label: str) -> BookLabelEntity:
+        existing = (
+            self.db.query(BookLabel)
+            .filter(
+                BookLabel.user_id == int(user_id),
+                BookLabel.canonical_hash == canonical_hash
+            )
+            .first()
+        )
+
+        if existing:
+            existing.label = label
+        else:
+            db_label = BookLabel(
+                user_id=int(user_id),
+                canonical_hash=canonical_hash,
+                label=label
+            )
+            self.db.add(db_label)
+
+        self.db.commit()
+        return BookLabelEntity(user_id=user_id, canonical_hash=canonical_hash, label=label)
+
+    def delete_label(self, user_id: str, canonical_hash: str) -> bool:
+        result = (
+            self.db.query(BookLabel)
+            .filter(
+                BookLabel.user_id == int(user_id),
+                BookLabel.canonical_hash == canonical_hash
+            )
+            .delete()
+        )
+        self.db.commit()
+        return result > 0
+
+    def get_all_labels(self, user_id: str) -> list[BookLabelEntity]:
+        labels = (
+            self.db.query(BookLabel)
+            .filter(BookLabel.user_id == int(user_id))
+            .all()
+        )
+        return [
+            BookLabelEntity(
+                user_id=str(label.user_id),
+                canonical_hash=label.canonical_hash,
+                label=label.label
+            )
+            for label in labels
+        ]

@@ -1,5 +1,5 @@
 import time
-from sqlalchemy import Column, Integer, String, Float, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, UniqueConstraint
 from pydantic import BaseModel
 from database import Base
 
@@ -33,6 +33,19 @@ class DocumentLink(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     document_hash = Column(String, nullable=False, index=True)
     canonical_hash = Column(String, nullable=False)
+
+
+class BookLabel(Base):
+    __tablename__ = "book_labels"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    canonical_hash = Column(String, nullable=False, index=True)
+    label = Column(String, nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint('user_id', 'canonical_hash', name='uq_user_canonical'),
+    )
 
 
 class UserCreate(BaseModel):

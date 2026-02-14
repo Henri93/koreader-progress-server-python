@@ -31,6 +31,14 @@ class DocumentLinkEntity:
     canonical_hash: str
 
 
+@dataclass
+class BookLabelEntity:
+    """Database-agnostic book label representation."""
+    user_id: str
+    canonical_hash: str
+    label: str
+
+
 class UserRepository(Protocol):
     """Protocol for user data access."""
 
@@ -72,6 +80,10 @@ class ProgressRepository(Protocol):
         """Insert or update progress record."""
         ...
 
+    def get_all_by_user(self, user_id: str) -> list[ProgressEntity]:
+        """Get all progress records for a user."""
+        ...
+
 
 class DocumentLinkRepository(Protocol):
     """Protocol for document link data access."""
@@ -94,4 +106,24 @@ class DocumentLinkRepository(Protocol):
 
     def get_linked_hashes(self, user_id: str, canonical_hash: str) -> list[str]:
         """Get all hashes linked to a canonical hash."""
+        ...
+
+
+class BookLabelRepository(Protocol):
+    """Protocol for book label data access."""
+
+    def get_label(self, user_id: str, canonical_hash: str) -> Optional[str]:
+        """Get label for a canonical hash. Returns None if no label exists."""
+        ...
+
+    def set_label(self, user_id: str, canonical_hash: str, label: str) -> BookLabelEntity:
+        """Set or update label for a canonical hash."""
+        ...
+
+    def delete_label(self, user_id: str, canonical_hash: str) -> bool:
+        """Delete a label. Returns True if deleted, False if not found."""
+        ...
+
+    def get_all_labels(self, user_id: str) -> list[BookLabelEntity]:
+        """Get all labels for a user."""
         ...

@@ -3,7 +3,7 @@ from typing import Optional
 from decimal import Decimal
 import boto3
 from botocore.exceptions import ClientError
-from repositories.protocols import UserEntity, ProgressEntity, DocumentLinkEntity
+from repositories.protocols import UserEntity, ProgressEntity, DocumentLinkEntity, BookLabelEntity
 
 
 def get_dynamodb_resource():
@@ -168,6 +168,28 @@ class DynamoProgressRepository:
         self.table.put_item(Item=item)
         return progress
 
+    def get_all_by_user(self, user_id: str) -> list[ProgressEntity]:
+        try:
+            response = self.table.query(
+                KeyConditionExpression="user_id = :uid",
+                ExpressionAttributeValues={":uid": user_id}
+            )
+            return [
+                ProgressEntity(
+                    user_id=item["user_id"],
+                    document=item["document"],
+                    progress=item["progress"],
+                    percentage=float(item["percentage"]),
+                    device=item["device"],
+                    device_id=item["device_id"],
+                    timestamp=int(item["timestamp"]),
+                    filename=item.get("filename")
+                )
+                for item in response.get("Items", [])
+            ]
+        except ClientError:
+            return []
+
 
 class DynamoDocumentLinkRepository:
     """DynamoDB-based document link repository."""
@@ -244,5 +266,70 @@ class DynamoDocumentLinkRepository:
                 }
             )
             return [item["document_hash"] for item in response.get("Items", [])]
+        except ClientError:
+            return []
+
+
+class DynamoBookLabelRepository:
+    """DynamoDB-based book label repository."""
+
+    def __init__(self):
+        dynamodb = get_dynamodb_resource()
+        table_name = os.getenv("DYNAMODB_BOOK_LABELS_TABLE", "reader-progress-book-labels")
+        self.table = dynamodb.Table(table_name)
+
+    def get_label(self, user_id: str, canonical_hash: str) -> Optional[str]:
+        try:
+            response = self.table.get_item(
+                Key={
+                    "user_id": user_id,
+                    "canonical_hash": canonical_hash
+                }
+            )
+            item = response.get("Item")
+            return item["label"] if item else None
+        except ClientError:
+            return None
+
+    def set_label(self, user_id: str, canonical_hash: str, label: str) -> BookLabelEntity:
+        self.table.put_item(
+            Item={
+                "user_id": user_id,
+                "canonical_hash": canonical_hash,
+                "label": label
+            }
+        )
+        return BookLabelEntity(
+            user_id=user_id,
+            canonical_hash=canonical_hash,
+            label=label
+        )
+
+    def delete_label(self, user_id: str, canonical_hash: str) -> bool:
+        try:
+            self.table.delete_item(
+                Key={
+                    "user_id": user_id,
+                    "canonical_hash": canonical_hash
+                }
+            )
+            return True
+        except ClientError:
+            return False
+
+    def get_all_labels(self, user_id: str) -> list[BookLabelEntity]:
+        try:
+            response = self.table.query(
+                KeyConditionExpression="user_id = :uid",
+                ExpressionAttributeValues={":uid": user_id}
+            )
+            return [
+                BookLabelEntity(
+                    user_id=item["user_id"],
+                    canonical_hash=item["canonical_hash"],
+                    label=item["label"]
+                )
+                for item in response.get("Items", [])
+            ]
         except ClientError:
             return []

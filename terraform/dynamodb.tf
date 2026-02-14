@@ -63,3 +63,27 @@ resource "aws_dynamodb_table" "document_links" {
     Project     = var.project_name
   }
 }
+
+# Book labels table - Composite key: PK=user_id, SK=canonical_hash
+resource "aws_dynamodb_table" "book_labels" {
+  name         = "${var.project_name}-${var.environment}-book-labels"
+  billing_mode = "PAY_PER_REQUEST"
+  hash_key     = "user_id"
+  range_key    = "canonical_hash"
+
+  attribute {
+    name = "user_id"
+    type = "S"
+  }
+
+  attribute {
+    name = "canonical_hash"
+    type = "S"
+  }
+
+  tags = {
+    Name        = "${var.project_name}-book-labels"
+    Environment = var.environment
+    Project     = var.project_name
+  }
+}

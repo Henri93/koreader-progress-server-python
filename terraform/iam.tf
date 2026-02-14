@@ -49,7 +49,8 @@ resource "aws_iam_role_policy" "lambda_dynamodb" {
         Resource = [
           aws_dynamodb_table.users.arn,
           aws_dynamodb_table.progress.arn,
-          aws_dynamodb_table.document_links.arn
+          aws_dynamodb_table.document_links.arn,
+          aws_dynamodb_table.book_labels.arn
         ]
       }
     ]

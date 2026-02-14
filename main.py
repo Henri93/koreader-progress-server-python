@@ -3,8 +3,13 @@ import time
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException
 
-from schemas import UserCreate, ProgressUpdate, ProgressResponse, LinkRequest, LinkResponse, DocumentLinkResponse
-from repositories import get_user_repository, get_progress_repository, get_document_link_repository
+from fastapi.responses import Response
+from schemas import (
+    UserCreate, ProgressUpdate, ProgressResponse, LinkRequest, LinkResponse,
+    DocumentLinkResponse, BookSummary, BooksListResponse, BookLabelUpdate, BookLabelResponse
+)
+from repositories import get_user_repository, get_progress_repository, get_document_link_repository, get_book_label_repository
+from svg_card import render_progress_card
 from repositories.protocols import UserEntity, ProgressEntity
 from auth import hash_password, get_current_user
 
@@ -198,3 +203,151 @@ def unlink_document(
     if not deleted:
         raise HTTPException(status_code=404, detail="Link not found")
     return {"status": "success"}
+
+
+@app.get("/books")
+def list_books(
+    user: UserEntity = Depends(get_current_user),
+    progress_repo=Depends(get_progress_repository),
+    link_repo=Depends(get_document_link_repository),
+    label_repo=Depends(get_book_label_repository),
+) -> BooksListResponse:
+    """List all books with their progress for the authenticated user."""
+    all_progress = progress_repo.get_all_by_user(user.id)
+    all_links = link_repo.get_all_links(user.id)
+    all_labels = label_repo.get_all_labels(user.id)
+
+    label_map = {label.canonical_hash: label.label for label in all_labels}
+    reverse_link_map: dict[str, list[str]] = {}
+    for link in all_links:
+        if link.canonical_hash not in reverse_link_map:
+            reverse_link_map[link.canonical_hash] = []
+        reverse_link_map[link.canonical_hash].append(link.document_hash)
+
+    books: dict[str, BookSummary] = {}
+    for p in all_progress:
+        canonical_hash = p.document
+        if canonical_hash in books:
+            if p.timestamp > books[canonical_hash].timestamp:
+                books[canonical_hash] = BookSummary(
+                    canonical_hash=canonical_hash,
+                    linked_hashes=reverse_link_map.get(canonical_hash, []),
+                    label=label_map.get(canonical_hash),
+                    filename=p.filename,
+                    progress=p.progress,
+                    percentage=p.percentage,
+                    device=p.device,
+                    device_id=p.device_id,
+                    timestamp=p.timestamp,
+                )
+        else:
+            books[canonical_hash] = BookSummary(
+                canonical_hash=canonical_hash,
+                linked_hashes=reverse_link_map.get(canonical_hash, []),
+                label=label_map.get(canonical_hash),
+                filename=p.filename,
+                progress=p.progress,
+                percentage=p.percentage,
+                device=p.device,
+                device_id=p.device_id,
+                timestamp=p.timestamp,
+            )
+
+    sorted_books = sorted(books.values(), key=lambda b: b.timestamp, reverse=True)
+    return BooksListResponse(books=sorted_books)
+
+
+@app.put("/books/label")
+def update_book_label(
+    request: BookLabelUpdate,
+    user: UserEntity = Depends(get_current_user),
+    progress_repo=Depends(get_progress_repository),
+    label_repo=Depends(get_book_label_repository),
+) -> BookLabelResponse:
+    """Update or set a book's display label."""
+    progress = progress_repo.get_by_user_and_document(user.id, request.canonical_hash)
+    if not progress:
+        raise HTTPException(status_code=404, detail="Book not found")
+
+    label_entity = label_repo.set_label(user.id, request.canonical_hash, request.label)
+    return BookLabelResponse(
+        canonical_hash=label_entity.canonical_hash,
+        label=label_entity.label,
+    )
+
+
+@app.delete("/books/label/{canonical_hash}")
+def delete_book_label(
+    canonical_hash: str,
+    user: UserEntity = Depends(get_current_user),
+    label_repo=Depends(get_book_label_repository),
+):
+    """Delete a book's custom label (reverts to using filename)."""
+    deleted = label_repo.delete_label(user.id, canonical_hash)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Label not found")
+    return {"status": "success"}
+
+
+@app.get("/card/{username}")
+def get_progress_card(
+    username: str,
+    limit: int = 5,
+    user_repo=Depends(get_user_repository),
+    progress_repo=Depends(get_progress_repository),
+    link_repo=Depends(get_document_link_repository),
+    label_repo=Depends(get_book_label_repository),
+):
+    """Generate an SVG progress card for embedding in GitHub READMEs."""
+    user = user_repo.get_by_username(username)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    all_progress = progress_repo.get_all_by_user(user.id)
+    all_links = link_repo.get_all_links(user.id)
+    all_labels = label_repo.get_all_labels(user.id)
+
+    label_map = {label.canonical_hash: label.label for label in all_labels}
+    reverse_link_map: dict[str, list[str]] = {}
+    for link in all_links:
+        if link.canonical_hash not in reverse_link_map:
+            reverse_link_map[link.canonical_hash] = []
+        reverse_link_map[link.canonical_hash].append(link.document_hash)
+
+    books: dict[str, BookSummary] = {}
+    for p in all_progress:
+        canonical_hash = p.document
+        if canonical_hash in books:
+            if p.timestamp > books[canonical_hash].timestamp:
+                books[canonical_hash] = BookSummary(
+                    canonical_hash=canonical_hash,
+                    linked_hashes=reverse_link_map.get(canonical_hash, []),
+                    label=label_map.get(canonical_hash),
+                    filename=p.filename,
+                    progress=p.progress,
+                    percentage=p.percentage,
+                    device=p.device,
+                    device_id=p.device_id,
+                    timestamp=p.timestamp,
+                )
+        else:
+            books[canonical_hash] = BookSummary(
+                canonical_hash=canonical_hash,
+                linked_hashes=reverse_link_map.get(canonical_hash, []),
+                label=label_map.get(canonical_hash),
+                filename=p.filename,
+                progress=p.progress,
+                percentage=p.percentage,
+                device=p.device,
+                device_id=p.device_id,
+                timestamp=p.timestamp,
+            )
+
+    sorted_books = sorted(books.values(), key=lambda b: b.timestamp, reverse=True)[:limit]
+    svg_content = render_progress_card(sorted_books)
+
+    return Response(
+        content=svg_content,
+        media_type="image/svg+xml",
+        headers={"Cache-Control": "max-age=1800"}
+    )
