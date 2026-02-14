@@ -9,7 +9,7 @@ A simple Python/FastAPI server for syncing reading progress across KOReader devi
 
 Don't want to deploy your own? 
 
-Just [create an account](https://www.null-space.xyz/reader) then set your KOReader or Readest app to use `https://api.null-space.xyz/reader` for progress sync.
+Just [create an account](https://www.null-space.xyz/reader) then set your KOReader or Readest app to use `https://api.null-space.xyz` for progress sync.
 
 > [!WARNING]
 > **Kindle Sync Timeout Issue**

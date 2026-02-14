@@ -40,7 +40,7 @@ def render_progress_card(books: list["BookSummary"]) -> str:
     else:
         for i, book in enumerate(books):
             y_offset = header_height + (i * book_height) + 20
-            title = html.escape(book.label or book.filename or "Untitled")
+            title = html.escape(book.label or book.filename or book.canonical_hash)
             if len(title) > 40:
                 title = title[:37] + "..."
 
