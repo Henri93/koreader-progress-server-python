@@ -388,7 +388,8 @@ def get_progress_card(
                 timestamp=p.timestamp,
             )
 
-    sorted_books = sorted(books.values(), key=lambda b: b.timestamp, reverse=True)[:limit]
+    # Sort by progress (highest first), then by timestamp (most recent first)
+    sorted_books = sorted(books.values(), key=lambda b: (b.percentage, b.timestamp), reverse=True)[:limit]
     svg_content = render_progress_card(sorted_books)
 
     return Response(
